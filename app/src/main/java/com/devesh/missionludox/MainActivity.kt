@@ -7,13 +7,13 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.random.Random
@@ -21,7 +21,6 @@ import kotlin.random.Random
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
             MaterialTheme {
                 GameScreen()
@@ -34,12 +33,19 @@ private val red = Color(0xFFE53935)
 private val green = Color(0xFF43A047)
 private val yellow = Color(0xFFFFD600)
 private val blue = Color(0xFF1E88E5)
-private val boardWhite = Color(0xFFFFFFFF)
-private val boardLine = Color(0xFF777777)
+
+private val route = buildList {
+    for (x in 0..13) add(x to 0)
+    for (y in 1..13) add(13 to y)
+    for (x in 12 downTo 0) add(x to 13)
+    for (y in 12 downTo 1) add(0 to y)
+}
 
 @Composable
 fun GameScreen() {
-    var dice by remember { mutableIntStateOf(1) }
+    var dice by remember { mutableIntStateOf(0) }
+    var message by remember { mutableStateOf("Roll a 6 to unlock a pawn!") }
+    val pawns = remember { mutableStateListOf(-1, -1, -1, -1) }
 
     Column(
         modifier = Modifier
@@ -50,40 +56,77 @@ fun GameScreen() {
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
         Text(
-            text = "MISSION LUDO X",
+            "MISSION LUDO X",
             color = Color.White,
             fontSize = 27.sp
         )
 
         Text(
-            text = "2 - 4 PLAYERS",
-            color = Color.LightGray,
-            fontSize = 14.sp
+            "RED PLAYER",
+            color = red,
+            fontSize = 17.sp
         )
 
-        LudoBoard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-        )
+        LudoBoard(pawns)
 
         Text(
-            text = "🎲  $dice",
+            "🎲  $dice",
             color = Color.White,
             fontSize = 42.sp
         )
 
+        Text(
+            message,
+            color = Color.LightGray,
+            fontSize = 14.sp
+        )
+
+        Button(onClick = {
+            dice = Random.nextInt(1, 7)
+            message = if (dice == 6) {
+                "You rolled 6! Move a pawn."
+            } else {
+                "You rolled $dice. Roll a 6 to unlock."
+            }
+        }) {
+            Text("ROLL DICE")
+        }
+
         Button(
             onClick = {
-                dice = Random.nextInt(1, 7)
-            },
-            shape = RoundedCornerShape(12.dp)
+                if (dice == 0) {
+                    message = "Roll the dice first!"
+                } else {
+                    val locked = pawns.indexOfFirst { it == -1 }
+
+                    if (locked != -1 && dice == 6) {
+                        pawns[locked] = 0
+                        message = "Pawn ${locked + 1} unlocked!"
+                    } else {
+                        val moving = pawns.indexOfFirst { it in 0 until 52 }
+
+                        if (moving != -1) {
+                            pawns[moving] =
+                                (pawns[moving] + dice).coerceAtMost(52)
+
+                            message = if (pawns[moving] == 52) {
+                                "Pawn ${moving + 1} reached the finish!"
+                            } else {
+                                "Pawn ${moving + 1} moved $dice steps!"
+                            }
+                        } else {
+                            message = "Roll a 6 to unlock a pawn!"
+                        }
+                    }
+                    dice = 0
+                }
+            }
         ) {
-            Text("ROLL DICE", fontSize = 18.sp)
+            Text("MOVE PAWN")
         }
 
         Text(
-            text = "CREATED BY DEVESH",
+            "CREATED BY DEVESH",
             color = Color.Gray,
             fontSize = 12.sp
         )
@@ -91,134 +134,96 @@ fun GameScreen() {
 }
 
 @Composable
-fun LudoBoard(modifier: Modifier = Modifier) {
+fun LudoBoard(pawns: List<Int>) {
     Canvas(
-        modifier = modifier
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
             .background(Color.White)
     ) {
         val cell = size.width / 15f
 
-        // Draw the board cells
-        for (row in 0 until 15) {
-            for (col in 0 until 15) {
+        // Four home areas
+        drawRect(red, Offset(0f, 0f), Size(cell * 6, cell * 6))
+        drawRect(green, Offset(cell * 9, 0f), Size(cell * 6, cell * 6))
+        drawRect(blue, Offset(0f, cell * 9), Size(cell * 6, cell * 6))
+        drawRect(yellow, Offset(cell * 9, cell * 9), Size(cell * 6, cell * 6))
 
-                val color = when {
-                    row < 6 && col < 6 -> red
-                    row < 6 && col >= 9 -> green
-                    row >= 9 && col < 6 -> blue
-                    row >= 9 && col >= 9 -> yellow
-
-                    row in 6..8 || col in 6..8 -> boardWhite
-
-                    else -> Color(0xFFF5F5F5)
-                }
-
-                drawRect(
-                    color = color,
-                    topLeft = androidx.compose.ui.geometry.Offset(
-                        col * cell,
-                        row * cell
-                    ),
-                    size = androidx.compose.ui.geometry.Size(cell, cell)
-                )
-
-                drawRect(
-                    color = boardLine,
-                    topLeft = androidx.compose.ui.geometry.Offset(
-                        col * cell,
-                        row * cell
-                    ),
-                    size = androidx.compose.ui.geometry.Size(cell, cell),
-                    style = Stroke(width = 1f)
-                )
-            }
-        }
-
-        // Home areas
-        fun home(x: Int, y: Int, color: Color) {
-            val inset = cell * 1.1f
-
+        // Home interiors
+        listOf(
+            Triple(0, 0, red),
+            Triple(9, 0, green),
+            Triple(0, 9, blue),
+            Triple(9, 9, yellow)
+        ).forEach { (x, y, color) ->
             drawRect(
-                color = boardWhite,
-                topLeft = androidx.compose.ui.geometry.Offset(
-                    x * cell + inset,
-                    y * cell + inset
-                ),
-                size = androidx.compose.ui.geometry.Size(
-                    cell * 3.8f,
-                    cell * 3.8f
-                )
+                Color.White,
+                Offset((x + 1) * cell, (y + 1) * cell),
+                Size(cell * 4, cell * 4)
             )
 
-            val positions = listOf(
-                2.0f to 2.0f,
-                4.0f to 2.0f,
-                2.0f to 4.0f,
-                4.0f to 4.0f
-            )
-
-            positions.forEach { (px, py) ->
-                drawCircle(
-                    color = color,
-                    radius = cell * 0.55f,
-                    center = androidx.compose.ui.geometry.Offset(
-                        (x + px) * cell,
-                        (y + py) * cell
+            for (i in 0..1) {
+                for (j in 0..1) {
+                    drawCircle(
+                        color,
+                        cell * 0.55f,
+                        Offset(
+                            (x + 2 + i * 2) * cell,
+                            (y + 2 + j * 2) * cell
+                        )
                     )
-                )
-                drawCircle(
-                    color = boardWhite,
-                    radius = cell * 0.23f,
-                    center = androidx.compose.ui.geometry.Offset(
-                        (x + px) * cell,
-                        (y + py) * cell
-                    )
-                )
+                }
             }
         }
 
-        home(0, 0, red)
-        home(9, 0, green)
-        home(0, 9, blue)
-        home(9, 9, yellow)
-
-        // Colored entry lanes
-        for (i in 1..5) {
-            drawRect(red, androidx.compose.ui.geometry.Offset(7 * cell, i * cell),
-                androidx.compose.ui.geometry.Size(cell, cell))
-
-            drawRect(green, androidx.compose.ui.geometry.Offset((13 - i) * cell, 7 * cell),
-                androidx.compose.ui.geometry.Size(cell, cell))
-
-            drawRect(yellow, androidx.compose.ui.geometry.Offset(7 * cell, (13 - i) * cell),
-                androidx.compose.ui.geometry.Size(cell, cell))
-
-            drawRect(blue, androidx.compose.ui.geometry.Offset(i * cell, 7 * cell),
-                androidx.compose.ui.geometry.Size(cell, cell))
+        // Track cells
+        route.forEach { (x, y) ->
+            drawRect(
+                Color(0xFFECECEC),
+                Offset(x * cell, y * cell),
+                Size(cell, cell)
+            )
+            drawRect(
+                Color.DarkGray,
+                Offset(x * cell, y * cell),
+                Size(cell, cell),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(1f)
+            )
         }
 
-        // Center finish area
-        val center = androidx.compose.ui.geometry.Offset(
-            7.5f * cell,
-            7.5f * cell
+        // Center
+        drawRect(
+            Color(0xFF222222),
+            Offset(cell * 6, cell * 6),
+            Size(cell * 3, cell * 3)
+        )
+        drawCircle(
+            Color.White,
+            cell * 1.1f,
+            Offset(cell * 7.5f, cell * 7.5f)
         )
 
-        drawCircle(
-            color = Color(0xFF222222),
-            radius = cell * 1.35f,
-            center = center
+        // Four red pawns
+        val homePositions = listOf(
+            Offset(cell * 2.5f, cell * 2.5f),
+            Offset(cell * 4.5f, cell * 2.5f),
+            Offset(cell * 2.5f, cell * 4.5f),
+            Offset(cell * 4.5f, cell * 4.5f)
         )
 
-        drawCircle(
-            color = yellow,
-            radius = cell * 1.0f,
-            center = center
-        )
+        pawns.forEachIndexed { index, position ->
+            val pawnPosition = if (position == -1) {
+                homePositions[index]
+            } else if (position < route.size) {
+                val (x, y) = route[position]
+                Offset((x + 0.5f) * cell, (y + 0.5f) * cell)
+            } else {
+                Offset(cell * 7.5f, cell * 7.5f)
+            }
 
-        drawCircle(
-            color = Color.White,
-            radius = cell * 0.55f,
-            center = center
-        )
+            drawCircle(Color.Black, cell * 0.43f, pawnPosition)
+            drawCircle(red, cell * 0.34f, pawnPosition)
+            drawCircle(Color.White, cell * 0.12f, pawnPosition)
+        }
     }
 }
