@@ -22,9 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -96,19 +95,17 @@ private fun pawnCenter(
 ): Offset {
     return when {
         position == -1 -> homes[playerIndex][pawn]
-
         position < 52 -> {
             val routeIndex =
                 (players[playerIndex].start + position) % 52
             val point = route[routeIndex]
             Offset(point.first + 0.5f, point.second + 0.5f)
         }
-
-        else -> Offset(7.5f, 7.5f)
+        else -> Offset(7f, 7f)
     }
 }
 
-private fun DrawScope.drawHomeArea(
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHomeArea(
     x: Int,
     y: Int,
     color: Color,
@@ -117,10 +114,7 @@ private fun DrawScope.drawHomeArea(
     drawRect(
         color = color,
         topLeft = Offset(x * cell, y * cell),
-        size = androidx.compose.ui.geometry.Size(
-            6 * cell,
-            6 * cell
-        )
+        size = Size(6 * cell, 6 * cell)
     )
 
     drawRect(
@@ -129,10 +123,7 @@ private fun DrawScope.drawHomeArea(
             (x + 1) * cell,
             (y + 1) * cell
         ),
-        size = androidx.compose.ui.geometry.Size(
-            4 * cell,
-            4 * cell
-        )
+        size = Size(4 * cell, 4 * cell)
     )
 
     drawRect(
@@ -141,19 +132,13 @@ private fun DrawScope.drawHomeArea(
             (x + 1.5f) * cell,
             (y + 1.5f) * cell
         ),
-        size = androidx.compose.ui.geometry.Size(
-            3 * cell,
-            3 * cell
-        )
+        size = Size(3 * cell, 3 * cell)
     )
 
     drawRect(
         color = Color(0xFF30394D),
         topLeft = Offset(x * cell, y * cell),
-        size = androidx.compose.ui.geometry.Size(
-            6 * cell,
-            6 * cell
-        ),
+        size = Size(6 * cell, 6 * cell),
         style = Stroke(width = 2f)
     )
 }
@@ -382,9 +367,7 @@ fun LocalGameScreen(
 
         val result = if (specialSequence != null) {
             val index = sequenceIndices[currentTurn].intValue
-
             sequenceIndices[currentTurn].intValue = index + 1
-
             specialSequence[index % specialSequence.size]
         } else {
             Random.nextInt(1, 7)
@@ -574,9 +557,7 @@ fun LocalGameScreen(
                     rotationZ = rotation.value
                     cameraDistance = 12 * density
                 }
-                .clickable(
-                    enabled = dice == 0 && !isRolling
-                ) {
+                .clickable(enabled = dice == 0 && !isRolling) {
                     rollDice()
                 },
             contentAlignment = Alignment.Center
@@ -622,60 +603,64 @@ fun LocalGameScreen(
 }
 
 @Composable
-fun DiceFace(value: Int) {
+fun LudoBoard(
+    positions: List<List<Int>>,
+    currentPlayerIndex: Int,
+    playerCount: Int,
+    onPawnTap: (Int) -> Unit
+) {
     Canvas(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(12.dp)
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .pointerInput(
+                positions,
+                currentPlayerIndex,
+                playerCount
+            ) {
+                detectTapGestures { tap ->
+                    val cell = size.width / 14f
+                    var selectedPawn = -1
+                    var nearestDistance = Float.MAX_VALUE
+
+                    for (pawn in 0..3) {
+                        val center = pawnCenter(
+                            currentPlayerIndex,
+                            pawn,
+                            positions[currentPlayerIndex][pawn]
+                        )
+
+                        val dx = tap.x - center.x * cell
+                        val dy = tap.y - center.y * cell
+                        val distance = dx * dx + dy * dy
+
+                        if (distance < nearestDistance) {
+                            nearestDistance = distance
+                            selectedPawn = pawn
+                        }
+                    }
+
+                    if (
+                        selectedPawn >= 0 &&
+                        nearestDistance < cell * cell * 0.5f
+                    ) {
+                        onPawnTap(selectedPawn)
+                    }
+                }
+            }
     ) {
-        val dotRadius = size.minDimension * 0.09f
-        val left = size.width * 0.22f
-        val centerX = size.width * 0.5f
-        val right = size.width * 0.78f
-        val top = size.height * 0.22f
-        val centerY = size.height * 0.5f
-        val bottom = size.height * 0.78f
+        val cell = size.width / 14f
 
-        val dots = when (value) {
-            1 -> listOf(Offset(centerX, centerY))
+        drawRect(Color.White)
 
-            2 -> listOf(
-                Offset(left, top),
-                Offset(right, bottom)
-            )
+        drawHomeArea(0, 8, blue, cell)
+        drawHomeArea(0, 0, red, cell)
+        drawHomeArea(8, 0, green, cell)
+        drawHomeArea(8, 8, yellow, cell)
 
-            3 -> listOf(
-                Offset(left, top),
-                Offset(centerX, centerY),
-                Offset(right, bottom)
-            )
-
-            4 -> listOf(
-                Offset(left, top),
-                Offset(right, top),
-                Offset(left, bottom),
-                Offset(right, bottom)
-            )
-
-            5 -> listOf(
-                Offset(left, top),
-                Offset(right, top),
-                Offset(centerX, centerY),
-                Offset(left, bottom),
-                Offset(right, bottom)
-            )
-
-            else -> listOf(
-                Offset(left, top),
-                Offset(right, top),
-                Offset(left, centerY),
-                Offset(right, centerY),
-                Offset(left, bottom),
-                Offset(right, bottom)
-            )
-        }
-
-        dots.forEach { point ->
-            drawCircle(
-                color = Color(0xFF171923),
-       
+        route.forEach { point ->
+            drawRect(
+                color = Color(0xFFE8EAF0),
+                topLeft = Offset(
+                    point.first * cell,
+                    poin
