@@ -6,9 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.random.Random
@@ -58,6 +59,41 @@ private val route = buildList {
     for (y in 12 downTo 1) add(0 to y)
 }
 
+private val homes = listOf(
+    listOf(
+        Offset(2.5f, 11.5f), Offset(4.5f, 11.5f),
+        Offset(2.5f, 13.5f), Offset(4.5f, 13.5f)
+    ),
+    listOf(
+        Offset(2.5f, 2.5f), Offset(4.5f, 2.5f),
+        Offset(2.5f, 4.5f), Offset(4.5f, 4.5f)
+    ),
+    listOf(
+        Offset(10.5f, 2.5f), Offset(12.5f, 2.5f),
+        Offset(10.5f, 4.5f), Offset(12.5f, 4.5f)
+    ),
+    listOf(
+        Offset(10.5f, 10.5f), Offset(12.5f, 10.5f),
+        Offset(10.5f, 12.5f), Offset(12.5f, 12.5f)
+    )
+)
+
+private fun pawnCenter(
+    playerIndex: Int,
+    pawn: Int,
+    position: Int
+): Offset {
+    return if (position == -1) {
+        homes[playerIndex][pawn]
+    } else if (position < 52) {
+        val routeIndex = (players[playerIndex].start + position) % 52
+        val (x, y) = route[routeIndex]
+        Offset(x + 0.5f, y + 0.5f)
+    } else {
+        Offset(7.5f, 7.5f)
+    }
+}
+
 @Composable
 fun MissionLudoApp() {
     var playerCount by remember { mutableIntStateOf(2) }
@@ -91,10 +127,7 @@ fun MissionLudoApp() {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 (2..4).forEach { count ->
                     Button(onClick = { playerCount = count }) {
-                        Text(
-                            if (playerCount == count) "$count ✓"
-                            else "$count"
-                        )
+                        Text(if (playerCount == count) "$count ✓" else "$count")
                     }
                 }
             }
@@ -104,11 +137,7 @@ fun MissionLudoApp() {
             Text("TURN ORDER", color = Color.LightGray)
 
             players.take(playerCount).forEach { player ->
-                Text(
-                    player.name,
-                    color = player.color,
-                    fontSize = 20.sp
-                )
+                Text(player.name, color = player.color, fontSize = 20.sp)
             }
 
             Spacer(Modifier.height(30.dp))
@@ -127,7 +156,6 @@ fun LocalGameScreen(
 ) {
     val activePlayers = players.take(playerCount)
 
-    // Four pawns for each of the four possible players.
     val positions = remember {
         List(4) { mutableStateListOf(-1, -1, -1, -1) }
     }
@@ -162,7 +190,43 @@ fun LocalGameScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        LudoBoard(positions)
+        LudoBoard(
+            positions = positions,
+            currentPlayerIndex = currentTurn,
+            onPawnTap = { pawn ->
+                val oldPosition = positions[currentTurn][pawn]
+
+                when {
+                    dice == 0 -> {
+                        message = "Roll the dice first!"
+                    }
+
+                    oldPosition == 52 -> {
+                        message = "That pawn has already finished!"
+                    }
+
+                    oldPosition == -1 && dice != 6 -> {
+                        message = "You need a 6 to unlock this pawn."
+                    }
+
+                    else -> {
+                        positions[currentTurn][pawn] =
+                            if (oldPosition == -1) 0
+                            else (oldPosition + dice).coerceAtMost(52)
+
+                        message = "Pawn ${pawn + 1} moved!"
+
+                        if (dice == 6) {
+                            message += " Roll again!"
+                        } else {
+                            currentTurn = (currentTurn + 1) % playerCount
+                        }
+
+                        dice = 0
+                    }
+                }
+            }
+        )
 
         Spacer(Modifier.height(12.dp))
 
@@ -182,10 +246,8 @@ fun LocalGameScreen(
 
         Button(
             onClick = {
-                if (dice == 0) {
-                    dice = Random.nextInt(1, 7)
-                    message = "You rolled $dice. Select a pawn."
-                }
+                dice = Random.nextInt(1, 7)
+                message = "You rolled $dice. Tap one of your pawns!"
             },
             enabled = dice == 0
         ) {
@@ -193,46 +255,10 @@ fun LocalGameScreen(
         }
 
         Text(
-            "SELECT YOUR PAWN",
+            "TAP YOUR PAWN ON THE BOARD",
             color = Color.White,
-            fontSize = 16.sp
+            fontSize = 14.sp
         )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            (0..3).forEach { pawn ->
-                Button(
-                    onClick = {
-                        val oldPosition = positions[currentTurn][pawn]
-
-                        if (oldPosition == 52) {
-                            message = "That pawn has finished!"
-                        } else if (oldPosition == -1 && dice != 6) {
-                            message = "You need a 6 to unlock this pawn."
-                        } else if (dice == 0) {
-                            message = "Roll the dice first!"
-                        } else {
-                            positions[currentTurn][pawn] =
-                                if (oldPosition == -1) 0
-                                else (oldPosition + dice).coerceAtMost(52)
-
-                            message = "Pawn ${pawn + 1} moved!"
-
-                            if (dice != 6) {
-                                currentTurn =
-                                    (currentTurn + 1) % playerCount
-                            } else {
-                                message += " Roll again!"
-                            }
-
-                            dice = 0
-                        }
-                    },
-                    enabled = dice != 0
-                ) {
-                    Text("${pawn + 1}")
-                }
-            }
-        }
 
         Spacer(Modifier.height(12.dp))
 
@@ -255,22 +281,58 @@ fun LocalGameScreen(
 }
 
 @Composable
-fun LudoBoard(positions: List<List<Int>>) {
+fun LudoBoard(
+    positions: List<List<Int>>,
+    currentPlayerIndex: Int,
+    onPawnTap: (Int) -> Unit
+) {
+    val positionSnapshot = positions.map { it.toList() }
+
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
             .background(Color.White)
+            .pointerInput(positionSnapshot, currentPlayerIndex, onPawnTap) {
+                detectTapGestures { tap ->
+                    val cell = size.width / 15f
+
+                    var selectedPawn = -1
+                    var closestDistance = cell * 0.55f
+
+                    for (pawn in 0..3) {
+                        val center = pawnCenter(
+                            currentPlayerIndex,
+                            pawn,
+                            positionSnapshot[currentPlayerIndex][pawn]
+                        )
+
+                        val point = Offset(
+                            center.x * cell,
+                            center.y * cell
+                        )
+
+                        val distance = (tap - point).getDistance()
+
+                        if (distance < closestDistance) {
+                            closestDistance = distance
+                            selectedPawn = pawn
+                        }
+                    }
+
+                    if (selectedPawn != -1) {
+                        onPawnTap(selectedPawn)
+                    }
+                }
+            }
     ) {
         val cell = size.width / 15f
 
-        // Four home areas
         drawRect(red, Offset(0f, 0f), Size(cell * 6, cell * 6))
         drawRect(green, Offset(cell * 9, 0f), Size(cell * 6, cell * 6))
         drawRect(blue, Offset(0f, cell * 9), Size(cell * 6, cell * 6))
         drawRect(yellow, Offset(cell * 9, cell * 9), Size(cell * 6, cell * 6))
 
-        // Home interiors
         val homeData = listOf(
             Triple(0, 0, red),
             Triple(9, 0, green),
@@ -278,7 +340,7 @@ fun LudoBoard(positions: List<List<Int>>) {
             Triple(9, 9, yellow)
         )
 
-        homeData.forEach { (x, y, color) ->
+        homeData.forEach { (x, y, _) ->
             drawRect(
                 Color.White,
                 Offset((x + 1) * cell, (y + 1) * cell),
@@ -286,7 +348,6 @@ fun LudoBoard(positions: List<List<Int>>) {
             )
         }
 
-        // Track
         route.forEach { (x, y) ->
             drawRect(
                 Color(0xFFECECEC),
@@ -301,7 +362,6 @@ fun LudoBoard(positions: List<List<Int>>) {
             )
         }
 
-        // Center finish
         drawRect(
             Color(0xFF222222),
             Offset(cell * 6, cell * 6),
@@ -314,47 +374,13 @@ fun LudoBoard(positions: List<List<Int>>) {
             Offset(cell * 7.5f, cell * 7.5f)
         )
 
-        // Pawn home positions
-        val homes = listOf(
-            listOf(
-                Offset(2.5f, 11.5f),
-                Offset(4.5f, 11.5f),
-                Offset(2.5f, 13.5f),
-                Offset(4.5f, 13.5f)
-            ),
-            listOf(
-                Offset(2.5f, 2.5f),
-                Offset(4.5f, 2.5f),
-                Offset(2.5f, 4.5f),
-                Offset(4.5f, 4.5f)
-            ),
-            listOf(
-                Offset(10.5f, 2.5f),
-                Offset(12.5f, 2.5f),
-                Offset(10.5f, 4.5f),
-                Offset(12.5f, 4.5f)
-            ),
-            listOf(
-                Offset(10.5f, 10.5f),
-                Offset(12.5f, 10.5f),
-                Offset(10.5f, 12.5f),
-                Offset(12.5f, 12.5f)
-            )
-        )
-
         players.forEachIndexed { playerIndex, player ->
             for (pawn in 0..3) {
-                val position = positions[playerIndex][pawn]
-
-                val center = if (position == -1) {
-                    homes[playerIndex][pawn]
-                } else if (position < 52) {
-                    val routeIndex = (player.start + position) % 52
-                    val (x, y) = route[routeIndex]
-                    Offset(x + 0.5f, y + 0.5f)
-                } else {
-                    Offset(7.5f, 7.5f)
-                }
+                val center = pawnCenter(
+                    playerIndex,
+                    pawn,
+                    positions[playerIndex][pawn]
+                )
 
                 val point = Offset(
                     center.x * cell,
