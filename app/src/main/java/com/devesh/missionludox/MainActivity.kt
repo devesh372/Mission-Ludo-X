@@ -1,3 +1,4 @@
+Kotlin
 
 package com.devesh.missionludox
 
@@ -119,19 +120,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHomeArea(
 
     drawRect(
         color = Color.White,
-        topLeft = Offset(
-            (x + 1) * cell,
-            (y + 1) * cell
-        ),
+        topLeft = Offset((x + 1) * cell, (y + 1) * cell),
         size = Size(4 * cell, 4 * cell)
     )
 
     drawRect(
         color = color,
-        topLeft = Offset(
-            (x + 1.5f) * cell,
-            (y + 1.5f) * cell
-        ),
+        topLeft = Offset((x + 1.5f) * cell, (y + 1.5f) * cell),
         size = Size(3 * cell, 3 * cell)
     )
 
@@ -194,11 +189,10 @@ fun MissionLudoApp() {
                     Button(
                         onClick = { playerCount = count },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor =
-                                if (playerCount == count)
-                                    Color(0xFFFFB300)
-                                else
-                                    Color(0xFF30394D)
+                            containerColor = if (playerCount == count)
+                                Color(0xFFFFB300)
+                            else
+                                Color(0xFF30394D)
                         )
                     ) {
                         Text(
@@ -211,7 +205,6 @@ fun MissionLudoApp() {
             }
 
             Spacer(Modifier.height(30.dp))
-
             Text("TURN ORDER", color = Color.LightGray)
 
             players.take(playerCount).forEach { player ->
@@ -252,9 +245,10 @@ fun PlayerPanel(
         modifier = modifier,
         shape = RoundedCornerShape(15.dp),
         colors = CardDefaults.cardColors(
-            containerColor =
-                if (active) Color(0xFF303B50)
-                else Color(0xFF1D2636)
+            containerColor = if (active)
+                Color(0xFF303B50)
+            else
+                Color(0xFF1D2636)
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (active) 5.dp else 1.dp
@@ -290,8 +284,10 @@ fun PlayerPanel(
 
                 Text(
                     if (active) "YOUR TURN" else "WAITING",
-                    color = if (active) Color(0xFFFFD54F)
-                    else Color.LightGray,
+                    color = if (active)
+                        Color(0xFFFFD54F)
+                    else
+                        Color.LightGray,
                     fontSize = 9.sp
                 )
             }
@@ -502,7 +498,9 @@ fun LocalGameScreen(
                                         else oldPosition + rolledValue
 
                                     if (wasLocked) {
-                                        unlockOrders[currentTurn].add(pawn + 1)
+                                        unlockOrders[currentTurn].add(
+                                            pawn + 1
+                                        )
                                     }
 
                                     val order =
@@ -662,5 +660,4 @@ fun LudoBoard(
             drawRect(
                 color = Color(0xFFE8EAF0),
                 topLeft = Offset(
-                    point.first * cell,
                     poin
