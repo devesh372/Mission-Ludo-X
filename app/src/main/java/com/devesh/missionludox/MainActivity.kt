@@ -4,126 +4,174 @@ package com.devesh.missionludox
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             MaterialTheme {
-                GameScreen()
+                MissionLudoApp()
             }
         }
     }
 }
 
-private val red = Color(0xFFE53935)
-private val green = Color(0xFF43A047)
-private val yellow = Color(0xFFFFD600)
-private val blue = Color(0xFF1E88E5)
+data class Player(
+    val name: String,
+    val color: Color
+)
 
-private val route = buildList {
-    for (x in 0..13) add(x to 0)
-    for (y in 1..13) add(13 to y)
-    for (x in 12 downTo 0) add(x to 13)
-    for (y in 12 downTo 1) add(0 to y)
+val players = listOf(
+    Player("Blue", Color(0xFF2196F3)),
+    Player("Red", Color(0xFFE53935)),
+    Player("Green", Color(0xFF43A047)),
+    Player("Yellow", Color(0xFFFFD600))
+)
+
+@Composable
+fun MissionLudoApp() {
+    var playerCount by remember { mutableIntStateOf(2) }
+    var gameStarted by remember { mutableStateOf(false) }
+
+    if (!gameStarted) {
+        PlayerSelectionScreen(
+            playerCount = playerCount,
+            onPlayerCountChange = { playerCount = it },
+            onStart = { gameStarted = true }
+        )
+    } else {
+        LocalGameScreen(
+            playerCount = playerCount,
+            onBack = { gameStarted = false }
+        )
+    }
 }
 
 @Composable
-fun GameScreen() {
-    var dice by remember { mutableIntStateOf(0) }
-    var message by remember { mutableStateOf("Roll a 6 to unlock a pawn!") }
-    val pawns = remember { mutableStateListOf(-1, -1, -1, -1) }
-
+fun PlayerSelectionScreen(
+    playerCount: Int,
+    onPlayerCountChange: (Int) -> Unit,
+    onStart: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF151525))
-            .padding(12.dp),
+            .padding(22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceEvenly
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
             "MISSION LUDO X",
             color = Color.White,
-            fontSize = 27.sp
+            fontSize = 30.sp
         )
 
+        Spacer(Modifier.height(12.dp))
+
         Text(
-            "RED PLAYER",
-            color = red,
+            "LOCAL MULTIPLAYER",
+            color = Color.LightGray,
+            fontSize = 16.sp
+        )
+
+        Spacer(Modifier.height(45.dp))
+
+        Text(
+            "SELECT PLAYERS",
+            color = Color.White,
+            fontSize = 21.sp
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            (2..4).forEach { count ->
+                Button(
+                    onClick = { onPlayerCountChange(count) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (playerCount == count)
+                            Color(0xFFFF3155)
+                        else Color(0xFF303044)
+                    )
+                ) {
+                    Text("$count")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(35.dp))
+
+        Text(
+            "PLAYER TURN ORDER",
+            color = Color.White,
             fontSize = 17.sp
         )
 
-        LudoBoard(pawns)
+        Spacer(Modifier.height(15.dp))
 
-        Text(
-            "🎲  $dice",
-            color = Color.White,
-            fontSize = 42.sp
-        )
+        players.take(playerCount).forEachIndexed { index, player ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp)
+                    .background(
+                        Color(0xFF252538),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "${index + 1}.",
+                    color = Color.White,
+                    fontSize = 18.sp
+                )
 
-        Text(
-            message,
-            color = Color.LightGray,
-            fontSize = 14.sp
-        )
+                Spacer(Modifier.width(14.dp))
 
-        Button(onClick = {
-            dice = Random.nextInt(1, 7)
-            message = if (dice == 6) {
-                "You rolled 6! Move a pawn."
-            } else {
-                "You rolled $dice. Roll a 6 to unlock."
+                Box(
+                    Modifier
+                        .size(18.dp)
+                        .background(player.color, RoundedCornerShape(50))
+                )
+
+                Spacer(Modifier.width(12.dp))
+
+                Text(
+                    player.name,
+                    color = Color.White,
+                    fontSize = 18.sp
+                )
             }
-        }) {
-            Text("ROLL DICE")
         }
+
+        Spacer(Modifier.height(35.dp))
 
         Button(
-            onClick = {
-                if (dice == 0) {
-                    message = "Roll the dice first!"
-                } else {
-                    val locked = pawns.indexOfFirst { it == -1 }
-
-                    if (locked != -1 && dice == 6) {
-                        pawns[locked] = 0
-                        message = "Pawn ${locked + 1} unlocked!"
-                    } else {
-                        val moving = pawns.indexOfFirst { it in 0 until 52 }
-
-                        if (moving != -1) {
-                            pawns[moving] =
-                                (pawns[moving] + dice).coerceAtMost(52)
-
-                            message = if (pawns[moving] == 52) {
-                                "Pawn ${moving + 1} reached the finish!"
-                            } else {
-                                "Pawn ${moving + 1} moved $dice steps!"
-                            }
-                        } else {
-                            message = "Roll a 6 to unlock a pawn!"
-                        }
-                    }
-                    dice = 0
-                }
-            }
+            onClick = onStart,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFF3155)
+            )
         ) {
-            Text("MOVE PAWN")
+            Text("START GAME", fontSize = 18.sp)
         }
+
+        Spacer(Modifier.height(25.dp))
 
         Text(
             "CREATED BY DEVESH",
@@ -134,96 +182,93 @@ fun GameScreen() {
 }
 
 @Composable
-fun LudoBoard(pawns: List<Int>) {
-    Canvas(
+fun LocalGameScreen(
+    playerCount: Int,
+    onBack: () -> Unit
+) {
+    val activePlayers = players.take(playerCount)
+    var currentTurn by remember { mutableIntStateOf(0) }
+    var dice by remember { mutableIntStateOf(0) }
+
+    val currentPlayer = activePlayers[currentTurn]
+
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
-            .background(Color.White)
+            .fillMaxSize()
+            .background(Color(0xFF151525))
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        val cell = size.width / 15f
+        Text(
+            "MISSION LUDO X",
+            color = Color.White,
+            fontSize = 27.sp
+        )
 
-        // Four home areas
-        drawRect(red, Offset(0f, 0f), Size(cell * 6, cell * 6))
-        drawRect(green, Offset(cell * 9, 0f), Size(cell * 6, cell * 6))
-        drawRect(blue, Offset(0f, cell * 9), Size(cell * 6, cell * 6))
-        drawRect(yellow, Offset(cell * 9, cell * 9), Size(cell * 6, cell * 6))
+        Spacer(Modifier.height(35.dp))
 
-        // Home interiors
-        listOf(
-            Triple(0, 0, red),
-            Triple(9, 0, green),
-            Triple(0, 9, blue),
-            Triple(9, 9, yellow)
-        ).forEach { (x, y, color) ->
-            drawRect(
-                Color.White,
-                Offset((x + 1) * cell, (y + 1) * cell),
-                Size(cell * 4, cell * 4)
-            )
+        Text(
+            "CURRENT PLAYER",
+            color = Color.LightGray,
+            fontSize = 15.sp
+        )
 
-            for (i in 0..1) {
-                for (j in 0..1) {
-                    drawCircle(
-                        color,
-                        cell * 0.55f,
-                        Offset(
-                            (x + 2 + i * 2) * cell,
-                            (y + 2 + j * 2) * cell
-                        )
-                    )
-                }
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            currentPlayer.name.uppercase(),
+            color = currentPlayer.color,
+            fontSize = 32.sp
+        )
+
+        Spacer(Modifier.height(30.dp))
+
+        Text(
+            "🎲 $dice",
+            color = Color.White,
+            fontSize = 55.sp
+        )
+
+        Spacer(Modifier.height(25.dp))
+
+        Button(
+            onClick = {
+                dice = (1..6).random()
             }
+        ) {
+            Text("ROLL DICE")
         }
 
-        // Track cells
-        route.forEach { (x, y) ->
-            drawRect(
-                Color(0xFFECECEC),
-                Offset(x * cell, y * cell),
-                Size(cell, cell)
-            )
-            drawRect(
-                Color.DarkGray,
-                Offset(x * cell, y * cell),
-                Size(cell, cell),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(1f)
-            )
+        Spacer(Modifier.height(12.dp))
+
+        Button(
+            onClick = {
+                currentTurn = (currentTurn + 1) % playerCount
+                dice = 0
+            },
+            enabled = dice != 0
+        ) {
+            Text("NEXT PLAYER")
         }
 
-        // Center
-        drawRect(
-            Color(0xFF222222),
-            Offset(cell * 6, cell * 6),
-            Size(cell * 3, cell * 3)
-        )
-        drawCircle(
-            Color.White,
-            cell * 1.1f,
-            Offset(cell * 7.5f, cell * 7.5f)
+        Spacer(Modifier.height(35.dp))
+
+        Text(
+            "TURN ORDER",
+            color = Color.LightGray
         )
 
-        // Four red pawns
-        val homePositions = listOf(
-            Offset(cell * 2.5f, cell * 2.5f),
-            Offset(cell * 4.5f, cell * 2.5f),
-            Offset(cell * 2.5f, cell * 4.5f),
-            Offset(cell * 4.5f, cell * 4.5f)
+        Text(
+            activePlayers.joinToString(" → ") { it.name },
+            color = Color.White,
+            fontSize = 15.sp
         )
 
-        pawns.forEachIndexed { index, position ->
-            val pawnPosition = if (position == -1) {
-                homePositions[index]
-            } else if (position < route.size) {
-                val (x, y) = route[position]
-                Offset((x + 0.5f) * cell, (y + 0.5f) * cell)
-            } else {
-                Offset(cell * 7.5f, cell * 7.5f)
-            }
+        Spacer(Modifier.height(30.dp))
 
-            drawCircle(Color.Black, cell * 0.43f, pawnPosition)
-            drawCircle(red, cell * 0.34f, pawnPosition)
-            drawCircle(Color.White, cell * 0.12f, pawnPosition)
+        TextButton(onClick = onBack) {
+            Text("BACK TO PLAYER SELECTION")
         }
     }
 }
