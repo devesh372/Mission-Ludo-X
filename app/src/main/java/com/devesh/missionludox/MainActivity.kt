@@ -23,6 +23,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -30,7 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import kotlin.math.hypot
 import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
@@ -93,16 +94,68 @@ private fun pawnCenter(
     pawn: Int,
     position: Int
 ): Offset {
-    return if (position == -1) {
-        homes[playerIndex][pawn]
-    } else if (position < 52) {
-        val routeIndex =
-            (players[playerIndex].start + position) % 52
-        val (x, y) = route[routeIndex]
-        Offset(x + 0.5f, y + 0.5f)
-    } else {
-        Offset(7.5f, 7.5f)
+    return when {
+        position == -1 -> homes[playerIndex][pawn]
+
+        position < 52 -> {
+            val routeIndex =
+                (players[playerIndex].start + position) % 52
+            val point = route[routeIndex]
+            Offset(point.first + 0.5f, point.second + 0.5f)
+        }
+
+        else -> Offset(7.5f, 7.5f)
     }
+}
+
+private fun DrawScope.drawHomeArea(
+    x: Int,
+    y: Int,
+    color: Color,
+    cell: Float
+) {
+    drawRect(
+        color = color,
+        topLeft = Offset(x * cell, y * cell),
+        size = androidx.compose.ui.geometry.Size(
+            6 * cell,
+            6 * cell
+        )
+    )
+
+    drawRect(
+        color = Color.White,
+        topLeft = Offset(
+            (x + 1) * cell,
+            (y + 1) * cell
+        ),
+        size = androidx.compose.ui.geometry.Size(
+            4 * cell,
+            4 * cell
+        )
+    )
+
+    drawRect(
+        color = color,
+        topLeft = Offset(
+            (x + 1.5f) * cell,
+            (y + 1.5f) * cell
+        ),
+        size = androidx.compose.ui.geometry.Size(
+            3 * cell,
+            3 * cell
+        )
+    )
+
+    drawRect(
+        color = Color(0xFF30394D),
+        topLeft = Offset(x * cell, y * cell),
+        size = androidx.compose.ui.geometry.Size(
+            6 * cell,
+            6 * cell
+        ),
+        style = Stroke(width = 2f)
+    )
 }
 
 @Composable
@@ -266,8 +319,6 @@ fun LocalGameScreen(
     playerCount: Int,
     onBack: () -> Unit
 ) {
-    val activePlayers = players.take(playerCount)
-
     val positions = remember {
         List(4) {
             mutableStateListOf(-1, -1, -1, -1)
@@ -289,6 +340,7 @@ fun LocalGameScreen(
     var currentTurn by remember { mutableIntStateOf(0) }
     var dice by remember { mutableIntStateOf(0) }
     var isRolling by remember { mutableStateOf(false) }
+
     var message by remember {
         mutableStateOf("Tap the dice to roll!")
     }
@@ -296,9 +348,13 @@ fun LocalGameScreen(
     val rotation = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
+    val activePlayers = players.take(playerCount)
     val currentPlayer = activePlayers[currentTurn]
 
-    fun hasLegalMove(playerIndex: Int, value: Int): Boolean {
+    fun hasLegalMove(
+        playerIndex: Int,
+        value: Int
+    ): Boolean {
         return positions[playerIndex].any { position ->
             when {
                 position == -1 -> value == 6
@@ -313,7 +369,7 @@ fun LocalGameScreen(
 
         val order = unlockOrders[currentTurn].toList()
 
-        // SPECIAL SEQUENCES - KEEP THESE RULES UNCHANGED.
+        // SPECIAL DICE RULES - DO NOT CHANGE.
         val specialSequence = when (order) {
             listOf(1, 2, 3, 4) ->
                 listOf(6, 6, 2, 1)
@@ -326,7 +382,9 @@ fun LocalGameScreen(
 
         val result = if (specialSequence != null) {
             val index = sequenceIndices[currentTurn].intValue
+
             sequenceIndices[currentTurn].intValue = index + 1
+
             specialSequence[index % specialSequence.size]
         } else {
             Random.nextInt(1, 7)
@@ -348,7 +406,8 @@ fun LocalGameScreen(
                 dice = 0
                 currentTurn = (currentTurn + 1) % playerCount
             } else {
-                message = "${currentPlayer.name} rolled $result. Move a pawn!"
+                message =
+                    "${currentPlayer.name} rolled $result. Move a pawn!"
             }
         }
     }
@@ -401,8 +460,6 @@ fun LocalGameScreen(
             Spacer(Modifier.height(8.dp))
         }
 
-        Spacer(Modifier.height(8.dp))
-
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
@@ -438,16 +495,19 @@ fun LocalGameScreen(
 
                             when {
                                 oldPosition == 52 -> {
-                                    message = "That pawn has already finished!"
+                                    message =
+                                        "That pawn has already finished!"
                                 }
 
                                 oldPosition == -1 && dice != 6 -> {
-                                    message = "You need a 6 to unlock this pawn."
+                                    message =
+                                        "You need a 6 to unlock this pawn."
                                 }
 
                                 oldPosition >= 0 &&
                                     oldPosition + dice > 52 -> {
-                                    message = "You need an exact number to finish!"
+                                    message =
+                                        "You need an exact number to finish!"
                                 }
 
                                 else -> {
@@ -478,12 +538,11 @@ fun LocalGameScreen(
                                             else
                                                 "Pawn ${pawn + 1} moved!"
 
-                                        else -> {
+                                        else ->
                                             if (wasLocked)
                                                 "Pawn ${pawn + 1} unlocked!"
                                             else
                                                 "Pawn ${pawn + 1} moved!"
-                                        }
                                     }
 
                                     dice = 0
@@ -515,7 +574,9 @@ fun LocalGameScreen(
                     rotationZ = rotation.value
                     cameraDistance = 12 * density
                 }
-                .clickable(enabled = dice == 0 && !isRolling) {
+                .clickable(
+                    enabled = dice == 0 && !isRolling
+                ) {
                     rollDice()
                 },
             contentAlignment = Alignment.Center
@@ -577,79 +638,44 @@ fun DiceFace(value: Int) {
 
         val dots = when (value) {
             1 -> listOf(Offset(centerX, centerY))
+
             2 -> listOf(
-                Offset(left, top), Offset(right, bottom)
+                Offset(left, top),
+                Offset(right, bottom)
             )
+
             3 -> listOf(
                 Offset(left, top),
                 Offset(centerX, centerY),
                 Offset(right, bottom)
             )
+
             4 -> listOf(
-                Offset(left, top), Offset(right, top),
-                Offset(left, bottom), Offset(right, bottom)
+                Offset(left, top),
+                Offset(right, top),
+                Offset(left, bottom),
+                Offset(right, bottom)
             )
+
             5 -> listOf(
-                Offset(left, top), Offset(right, top),
+                Offset(left, top),
+                Offset(right, top),
                 Offset(centerX, centerY),
-                Offset(left, bottom), Offset(right, bottom)
+                Offset(left, bottom),
+                Offset(right, bottom)
             )
+
             else -> listOf(
-                Offset(left, top), Offset(right, top),
-                Offset(left, centerY), Offset(right, centerY),
-                Offset(left, bottom), Offset(right, bottom)
+                Offset(left, top),
+                Offset(right, top),
+                Offset(left, centerY),
+                Offset(right, centerY),
+                Offset(left, bottom),
+                Offset(right, bottom)
             )
         }
 
         dots.forEach { point ->
             drawCircle(
                 color = Color(0xFF171923),
-                radius = dotRadius,
-                center = point
-            )
-        }
-    }
-}
-
-@Composable
-fun LudoBoard(
-    positions: List<List<Int>>,
-    currentPlayerIndex: Int,
-    playerCount: Int,
-    onPawnTap: (Int) -> Unit
-) {
-    val positionSnapshot = positions.map { it.toList() }
-
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
-            .pointerInput(
-                positionSnapshot,
-                currentPlayerIndex,
-                onPawnTap
-            ) {
-                detectTapGestures { tap ->
-                    val cell = size.width / 15f
-
-                    var selectedPawn = -1
-                    var closestDistance = cell * 0.65f
-
-                    for (pawn in 0..3) {
-                        val position =
-                            positionSnapshot[currentPlayerIndex][pawn]
-
-                        val center = pawnCenter(
-                            currentPlayerIndex,
-                            pawn,
-                            position
-                        )
-
-                        val pixelX = center.x * cell
-                        val pixelY = center.y * cell
-
-                        val distance = hypot(
-                            tap.x - pixelX,
-                            tap.
+       
