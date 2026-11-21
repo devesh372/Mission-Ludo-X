@@ -21,16 +21,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import kotlin.math.hypot
 import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
@@ -274,14 +274,12 @@ fun LocalGameScreen(
         }
     }
 
-    // Independent pawn unlocking order for every player.
     val unlockOrders = remember {
         List(4) {
             mutableStateListOf<Int>()
         }
     }
 
-    // Independent dice sequence progress for every player.
     val sequenceIndices = remember {
         List(4) {
             mutableIntStateOf(0)
@@ -315,7 +313,7 @@ fun LocalGameScreen(
 
         val order = unlockOrders[currentTurn].toList()
 
-        // SPECIAL SEQUENCES: DO NOT CHANGE THESE RULES.
+        // SPECIAL SEQUENCES - KEEP THESE RULES UNCHANGED.
         val specialSequence = when (order) {
             listOf(1, 2, 3, 4) ->
                 listOf(6, 6, 2, 1)
@@ -328,8 +326,7 @@ fun LocalGameScreen(
 
         val result = if (specialSequence != null) {
             val index = sequenceIndices[currentTurn].intValue
-            sequenceIndices[currentTurn].intValue =
-                index + 1
+            sequenceIndices[currentTurn].intValue = index + 1
             specialSequence[index % specialSequence.size]
         } else {
             Random.nextInt(1, 7)
@@ -348,10 +345,8 @@ fun LocalGameScreen(
 
             if (!hasLegalMove(currentTurn, result)) {
                 message = "No valid moves. Next player's turn!"
-
                 dice = 0
-                currentTurn =
-                    (currentTurn + 1) % playerCount
+                currentTurn = (currentTurn + 1) % playerCount
             } else {
                 message = "${currentPlayer.name} rolled $result. Move a pawn!"
             }
@@ -383,7 +378,6 @@ fun LocalGameScreen(
 
         Spacer(Modifier.height(15.dp))
 
-        // Player profiles.
         activePlayers.chunked(2).forEach { rowPlayers ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -444,36 +438,28 @@ fun LocalGameScreen(
 
                             when {
                                 oldPosition == 52 -> {
-                                    message =
-                                        "That pawn has already finished!"
+                                    message = "That pawn has already finished!"
                                 }
 
                                 oldPosition == -1 && dice != 6 -> {
-                                    message =
-                                        "You need a 6 to unlock this pawn."
+                                    message = "You need a 6 to unlock this pawn."
                                 }
 
                                 oldPosition >= 0 &&
                                     oldPosition + dice > 52 -> {
-                                    message =
-                                        "You need an exact number to finish!"
+                                    message = "You need an exact number to finish!"
                                 }
 
                                 else -> {
                                     val rolledValue = dice
-                                    val wasLocked =
-                                        oldPosition == -1
+                                    val wasLocked = oldPosition == -1
 
                                     positions[currentTurn][pawn] =
-                                        if (wasLocked) {
-                                            0
-                                        } else {
-                                            oldPosition + rolledValue
-                                        }
+                                        if (wasLocked) 0
+                                        else oldPosition + rolledValue
 
                                     if (wasLocked) {
-                                        unlockOrders[currentTurn]
-                                            .add(pawn + 1)
+                                        unlockOrders[currentTurn].add(pawn + 1)
                                     }
 
                                     val order =
@@ -518,7 +504,6 @@ fun LocalGameScreen(
 
         Spacer(Modifier.height(15.dp))
 
-        // Animated shared dice.
         Box(
             modifier = Modifier
                 .size(90.dp)
@@ -530,9 +515,7 @@ fun LocalGameScreen(
                     rotationZ = rotation.value
                     cameraDistance = 12 * density
                 }
-                .clickable(
-                    enabled = dice == 0 && !isRolling
-                ) {
+                .clickable(enabled = dice == 0 && !isRolling) {
                     rollDice()
                 },
             contentAlignment = Alignment.Center
@@ -652,4 +635,21 @@ fun LudoBoard(
                     val cell = size.width / 15f
 
                     var selectedPawn = -1
-                    var
+                    var closestDistance = cell * 0.65f
+
+                    for (pawn in 0..3) {
+                        val position =
+                            positionSnapshot[currentPlayerIndex][pawn]
+
+                        val center = pawnCenter(
+                            currentPlayerIndex,
+                            pawn,
+                            position
+                        )
+
+                        val pixelX = center.x * cell
+                        val pixelY = center.y * cell
+
+                        val distance = hypot(
+                            tap.x - pixelX,
+                            tap.
