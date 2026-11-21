@@ -8,9 +8,11 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -25,10 +27,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
@@ -70,28 +71,20 @@ private val route = buildList {
 
 private val homes = listOf(
     listOf(
-        Offset(2.5f, 11.5f),
-        Offset(4.5f, 11.5f),
-        Offset(2.5f, 13.5f),
-        Offset(4.5f, 13.5f)
+        Offset(2.5f, 11.5f), Offset(4.5f, 11.5f),
+        Offset(2.5f, 13.5f), Offset(4.5f, 13.5f)
     ),
     listOf(
-        Offset(2.5f, 2.5f),
-        Offset(4.5f, 2.5f),
-        Offset(2.5f, 4.5f),
-        Offset(4.5f, 4.5f)
+        Offset(2.5f, 2.5f), Offset(4.5f, 2.5f),
+        Offset(2.5f, 4.5f), Offset(4.5f, 4.5f)
     ),
     listOf(
-        Offset(10.5f, 2.5f),
-        Offset(12.5f, 2.5f),
-        Offset(10.5f, 4.5f),
-        Offset(12.5f, 4.5f)
+        Offset(10.5f, 2.5f), Offset(12.5f, 2.5f),
+        Offset(10.5f, 4.5f), Offset(12.5f, 4.5f)
     ),
     listOf(
-        Offset(10.5f, 10.5f),
-        Offset(12.5f, 10.5f),
-        Offset(10.5f, 12.5f),
-        Offset(12.5f, 12.5f)
+        Offset(10.5f, 10.5f), Offset(12.5f, 10.5f),
+        Offset(10.5f, 12.5f), Offset(12.5f, 12.5f)
     )
 )
 
@@ -125,15 +118,24 @@ fun MissionLudoApp() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF151525))
+                .background(Color(0xFF101522))
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                "MISSION LUDO X",
+                "MISSION",
                 color = Color.White,
-                fontSize = 30.sp
+                fontSize = 19.sp,
+                letterSpacing = 5.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                "LUDO X",
+                color = Color(0xFFFFD54F),
+                fontSize = 38.sp,
+                fontWeight = FontWeight.Black
             )
 
             Spacer(Modifier.height(35.dp))
@@ -141,7 +143,8 @@ fun MissionLudoApp() {
             Text(
                 "SELECT PLAYERS",
                 color = Color.White,
-                fontSize = 20.sp
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
             )
 
             Spacer(Modifier.height(20.dp))
@@ -150,10 +153,20 @@ fun MissionLudoApp() {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 (2..4).forEach { count ->
-                    Button(onClick = { playerCount = count }) {
+                    Button(
+                        onClick = { playerCount = count },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor =
+                                if (playerCount == count)
+                                    Color(0xFFFFB300)
+                                else
+                                    Color(0xFF30394D)
+                        )
+                    ) {
                         Text(
-                            if (playerCount == count) "$count ✓"
-                            else "$count"
+                            "$count",
+                            color = Color.White,
+                            fontSize = 18.sp
                         )
                     }
                 }
@@ -167,14 +180,82 @@ fun MissionLudoApp() {
                 Text(
                     player.name,
                     color = player.color,
-                    fontSize = 20.sp
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
             Spacer(Modifier.height(30.dp))
 
-            Button(onClick = { started = true }) {
-                Text("START GAME")
+            Button(
+                onClick = { started = true },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFFB300)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "START GAME",
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PlayerPanel(
+    player: Player,
+    active: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(15.dp),
+        colors = CardDefaults.cardColors(
+            containerColor =
+                if (active) Color(0xFF303B50)
+                else Color(0xFF1D2636)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (active) 5.dp else 1.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(35.dp)
+                    .shadow(3.dp, CircleShape)
+                    .background(player.color, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    player.name.take(1),
+                    color = Color.White,
+                    fontWeight = FontWeight.Black
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Column {
+                Text(
+                    player.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+
+                Text(
+                    if (active) "YOUR TURN" else "WAITING",
+                    color = if (active) Color(0xFFFFD54F)
+                    else Color.LightGray,
+                    fontSize = 9.sp
+                )
             }
         }
     }
@@ -193,14 +274,14 @@ fun LocalGameScreen(
         }
     }
 
-    // Records the order in which each player unlocks pawns.
+    // Independent pawn unlocking order for every player.
     val unlockOrders = remember {
         List(4) {
             mutableStateListOf<Int>()
         }
     }
 
-    // Each player has independent sequence progress.
+    // Independent dice sequence progress for every player.
     val sequenceIndices = remember {
         List(4) {
             mutableIntStateOf(0)
@@ -210,18 +291,31 @@ fun LocalGameScreen(
     var currentTurn by remember { mutableIntStateOf(0) }
     var dice by remember { mutableIntStateOf(0) }
     var isRolling by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf("Tap the dice to roll!") }
+    var message by remember {
+        mutableStateOf("Tap the dice to roll!")
+    }
 
     val rotation = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
     val currentPlayer = activePlayers[currentTurn]
 
+    fun hasLegalMove(playerIndex: Int, value: Int): Boolean {
+        return positions[playerIndex].any { position ->
+            when {
+                position == -1 -> value == 6
+                position in 0..51 -> position + value <= 52
+                else -> false
+            }
+        }
+    }
+
     fun rollDice() {
         if (dice != 0 || isRolling) return
 
         val order = unlockOrders[currentTurn].toList()
 
+        // SPECIAL SEQUENCES: DO NOT CHANGE THESE RULES.
         val specialSequence = when (order) {
             listOf(1, 2, 3, 4) ->
                 listOf(6, 6, 2, 1)
@@ -234,15 +328,16 @@ fun LocalGameScreen(
 
         val result = if (specialSequence != null) {
             val index = sequenceIndices[currentTurn].intValue
-            sequenceIndices[currentTurn].intValue = index + 1
+            sequenceIndices[currentTurn].intValue =
+                index + 1
             specialSequence[index % specialSequence.size]
         } else {
             Random.nextInt(1, 7)
         }
 
-        scope.launch {
-            isRolling = true
+        isRolling = true
 
+        scope.launch {
             rotation.animateTo(
                 targetValue = rotation.value + 720f,
                 animationSpec = tween(700)
@@ -251,14 +346,22 @@ fun LocalGameScreen(
             dice = result
             isRolling = false
 
-            message = "You rolled $result. Tap your pawn!"
+            if (!hasLegalMove(currentTurn, result)) {
+                message = "No valid moves. Next player's turn!"
+
+                dice = 0
+                currentTurn =
+                    (currentTurn + 1) % playerCount
+            } else {
+                message = "${currentPlayer.name} rolled $result. Move a pawn!"
+            }
         }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF151525))
+            .background(Color(0xFF101522))
             .verticalScroll(rememberScrollState())
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -266,162 +369,210 @@ fun LocalGameScreen(
         Text(
             "MISSION LUDO X",
             color = Color.White,
-            fontSize = 26.sp
+            fontSize = 25.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 1.sp
         )
-
-        Spacer(Modifier.height(12.dp))
 
         Text(
-            "${currentPlayer.name.uppercase()}'S TURN",
-            color = currentPlayer.color,
-            fontSize = 22.sp
+            "THE ULTIMATE LUDO EXPERIENCE",
+            color = Color(0xFFFFD54F),
+            fontSize = 9.sp,
+            letterSpacing = 2.sp
         )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(15.dp))
 
-        LudoBoard(
-            positions = positions,
-            currentPlayerIndex = currentTurn,
-            onPawnTap = { pawn ->
-                val oldPosition = positions[currentTurn][pawn]
+        // Player profiles.
+        activePlayers.chunked(2).forEach { rowPlayers ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowPlayers.forEach { player ->
+                    val index = players.indexOf(player)
 
-                when {
-                    isRolling -> {
-                        message = "Wait for the dice!"
-                    }
+                    PlayerPanel(
+                        player = player,
+                        active = currentTurn == index,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
-                    dice == 0 -> {
-                        message = "Tap the dice first!"
-                    }
+                if (rowPlayers.size == 1) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
 
-                    oldPosition == 52 -> {
-                        message = "That pawn has finished!"
-                        dice = 0
-                        currentTurn =
-                            (currentTurn + 1) % playerCount
-                    }
+            Spacer(Modifier.height(8.dp))
+        }
 
-                    oldPosition == -1 && dice != 6 -> {
-                        message = "You need a 6 to unlock this pawn."
-                    }
+        Spacer(Modifier.height(8.dp))
 
-                    else -> {
-                        val wasLocked = oldPosition == -1
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF202A3C)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "${currentPlayer.name.uppercase()}'S TURN",
+                    color = currentPlayer.color,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black
+                )
 
-                        positions[currentTurn][pawn] =
-                            if (wasLocked) {
-                                0
-                            } else {
-                                (oldPosition + dice).coerceAtMost(52)
-                            }
+                Spacer(Modifier.height(8.dp))
 
-                        if (wasLocked) {
-                            unlockOrders[currentTurn].add(pawn + 1)
-                        }
+                LudoBoard(
+                    positions = positions,
+                    currentPlayerIndex = currentTurn,
+                    playerCount = playerCount,
+                    onPawnTap = { pawn ->
+                        if (isRolling) {
+                            message = "Wait for the dice!"
+                        } else if (dice == 0) {
+                            message = "Tap the dice first!"
+                        } else {
+                            val oldPosition =
+                                positions[currentTurn][pawn]
 
-                        val order =
-                            unlockOrders[currentTurn].toList()
+                            when {
+                                oldPosition == 52 -> {
+                                    message =
+                                        "That pawn has already finished!"
+                                }
 
-                        message = when (order) {
-                            listOf(1, 2, 3, 4) ->
-                                if (wasLocked && order.size == 4)
-                                    "Special Mode A activated!"
-                                else
-                                    "Pawn ${pawn + 1} moved!"
+                                oldPosition == -1 && dice != 6 -> {
+                                    message =
+                                        "You need a 6 to unlock this pawn."
+                                }
 
-                            listOf(4, 2, 1, 3) ->
-                                if (wasLocked && order.size == 4)
-                                    "Special Mode B activated!"
-                                else
-                                    "Pawn ${pawn + 1} moved!"
+                                oldPosition >= 0 &&
+                                    oldPosition + dice > 52 -> {
+                                    message =
+                                        "You need an exact number to finish!"
+                                }
 
-                            else -> {
-                                if (wasLocked) {
-                                    "Pawn ${pawn + 1} unlocked!"
-                                } else {
-                                    "Pawn ${pawn + 1} moved!"
+                                else -> {
+                                    val rolledValue = dice
+                                    val wasLocked =
+                                        oldPosition == -1
+
+                                    positions[currentTurn][pawn] =
+                                        if (wasLocked) {
+                                            0
+                                        } else {
+                                            oldPosition + rolledValue
+                                        }
+
+                                    if (wasLocked) {
+                                        unlockOrders[currentTurn]
+                                            .add(pawn + 1)
+                                    }
+
+                                    val order =
+                                        unlockOrders[currentTurn].toList()
+
+                                    message = when (order) {
+                                        listOf(1, 2, 3, 4) ->
+                                            if (wasLocked && order.size == 4)
+                                                "SPECIAL MODE A ACTIVATED!"
+                                            else
+                                                "Pawn ${pawn + 1} moved!"
+
+                                        listOf(4, 2, 1, 3) ->
+                                            if (wasLocked && order.size == 4)
+                                                "SPECIAL MODE B ACTIVATED!"
+                                            else
+                                                "Pawn ${pawn + 1} moved!"
+
+                                        else -> {
+                                            if (wasLocked)
+                                                "Pawn ${pawn + 1} unlocked!"
+                                            else
+                                                "Pawn ${pawn + 1} moved!"
+                                        }
+                                    }
+
+                                    dice = 0
+
+                                    if (rolledValue != 6) {
+                                        currentTurn =
+                                            (currentTurn + 1) % playerCount
+                                    } else {
+                                        message += " Roll again!"
+                                    }
                                 }
                             }
                         }
-
-                        if (dice == 6) {
-                            message += " Roll again!"
-                        } else {
-                            currentTurn =
-                                (currentTurn + 1) % playerCount
-                        }
-
-                        dice = 0
                     }
-                }
+                )
             }
-        )
+        }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(15.dp))
 
-        // Tap the animated dice itself to roll.
+        // Animated shared dice.
         Box(
             modifier = Modifier
-                .size(88.dp)
-                .shadow(10.dp, RoundedCornerShape(18.dp))
-                .clip(RoundedCornerShape(18.dp))
+                .size(90.dp)
+                .shadow(12.dp, RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(Color.White)
                 .graphicsLayer {
                     rotationY = rotation.value
                     rotationZ = rotation.value
                     cameraDistance = 12 * density
                 }
-                .pointerInput(dice, isRolling) {
-                    detectTapGestures {
-                        rollDice()
-                    }
+                .clickable(
+                    enabled = dice == 0 && !isRolling
+                ) {
+                    rollDice()
                 },
             contentAlignment = Alignment.Center
         ) {
             if (dice == 0 || isRolling) {
-                Text(
-                    "🎲",
-                    fontSize = 45.sp
-                )
+                Text("🎲", fontSize = 48.sp)
             } else {
                 DiceFace(dice)
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
 
         Text(
-            message,
-            color = Color.LightGray,
-            fontSize = 14.sp
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            "TAP THE DICE TO ROLL",
-            color = Color.White,
-            fontSize = 14.sp
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            "PLAYERS: ${
-                activePlayers.joinToString(" → ") { it.name }
-            }",
-            color = Color.White,
+            if (isRolling) "ROLLING..."
+            else if (dice != 0) "MOVE YOUR PAWN"
+            else "TAP THE DICE TO ROLL",
+            color = Color(0xFFFFD54F),
+            fontWeight = FontWeight.Bold,
             fontSize = 13.sp
         )
 
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            message,
+            color = Color.White,
+            fontSize = 14.sp
+        )
+
+        Spacer(Modifier.height(12.dp))
+
         TextButton(onClick = onBack) {
-            Text("BACK TO MENU")
+            Text("BACK TO MENU", color = Color.LightGray)
         }
 
         Text(
             "CREATED BY DEVESH",
             color = Color.Gray,
-            fontSize = 12.sp
+            fontSize = 11.sp
         )
     }
 }
@@ -444,8 +595,7 @@ fun DiceFace(value: Int) {
         val dots = when (value) {
             1 -> listOf(Offset(centerX, centerY))
             2 -> listOf(
-                Offset(left, top),
-                Offset(right, bottom)
+                Offset(left, top), Offset(right, bottom)
             )
             3 -> listOf(
                 Offset(left, top),
@@ -453,25 +603,18 @@ fun DiceFace(value: Int) {
                 Offset(right, bottom)
             )
             4 -> listOf(
-                Offset(left, top),
-                Offset(right, top),
-                Offset(left, bottom),
-                Offset(right, bottom)
+                Offset(left, top), Offset(right, top),
+                Offset(left, bottom), Offset(right, bottom)
             )
             5 -> listOf(
-                Offset(left, top),
-                Offset(right, top),
+                Offset(left, top), Offset(right, top),
                 Offset(centerX, centerY),
-                Offset(left, bottom),
-                Offset(right, bottom)
+                Offset(left, bottom), Offset(right, bottom)
             )
             else -> listOf(
-                Offset(left, top),
-                Offset(right, top),
-                Offset(left, centerY),
-                Offset(right, centerY),
-                Offset(left, bottom),
-                Offset(right, bottom)
+                Offset(left, top), Offset(right, top),
+                Offset(left, centerY), Offset(right, centerY),
+                Offset(left, bottom), Offset(right, bottom)
             )
         }
 
@@ -489,6 +632,7 @@ fun DiceFace(value: Int) {
 fun LudoBoard(
     positions: List<List<Int>>,
     currentPlayerIndex: Int,
+    playerCount: Int,
     onPawnTap: (Int) -> Unit
 ) {
     val positionSnapshot = positions.map { it.toList() }
@@ -497,6 +641,7 @@ fun LudoBoard(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
+            .clip(RoundedCornerShape(8.dp))
             .background(Color.White)
             .pointerInput(
                 positionSnapshot,
@@ -507,133 +652,4 @@ fun LudoBoard(
                     val cell = size.width / 15f
 
                     var selectedPawn = -1
-                    var closestDistance = cell * 0.55f
-
-                    for (pawn in 0..3) {
-                        val center = pawnCenter(
-                            currentPlayerIndex,
-                            pawn,
-                            positionSnapshot[currentPlayerIndex][pawn]
-                        )
-
-                        val point = Offset(
-                            center.x * cell,
-                            center.y * cell
-                        )
-
-                        val distance = (tap - point).getDistance()
-
-                        if (distance < closestDistance) {
-                            closestDistance = distance
-                            selectedPawn = pawn
-                        }
-                    }
-
-                    if (selectedPawn != -1) {
-                        onPawnTap(selectedPawn)
-                    }
-                }
-            }
-    ) {
-        val cell = size.width / 15f
-
-        drawRect(
-            red,
-            Offset(0f, 0f),
-            Size(cell * 6, cell * 6)
-        )
-
-        drawRect(
-            green,
-            Offset(cell * 9, 0f),
-            Size(cell * 6, cell * 6)
-        )
-
-        drawRect(
-            blue,
-            Offset(0f, cell * 9),
-            Size(cell * 6, cell * 6)
-        )
-
-        drawRect(
-            yellow,
-            Offset(cell * 9, cell * 9),
-            Size(cell * 6, cell * 6)
-        )
-
-        val homeData = listOf(
-            Triple(0, 0, red),
-            Triple(9, 0, green),
-            Triple(0, 9, blue),
-            Triple(9, 9, yellow)
-        )
-
-        homeData.forEach { (x, y, _) ->
-            drawRect(
-                Color.White,
-                Offset((x + 1) * cell, (y + 1) * cell),
-                Size(cell * 4, cell * 4)
-            )
-        }
-
-        route.forEach { (x, y) ->
-            drawRect(
-                Color(0xFFECECEC),
-                Offset(x * cell, y * cell),
-                Size(cell, cell)
-            )
-
-            drawRect(
-                Color.DarkGray,
-                Offset(x * cell, y * cell),
-                Size(cell, cell),
-                style = Stroke(1f)
-            )
-        }
-
-        drawRect(
-            Color(0xFF222222),
-            Offset(cell * 6, cell * 6),
-            Size(cell * 3, cell * 3)
-        )
-
-        drawCircle(
-            Color.White,
-            cell,
-            Offset(cell * 7.5f, cell * 7.5f)
-        )
-
-        players.forEachIndexed { playerIndex, player ->
-            for (pawn in 0..3) {
-                val center = pawnCenter(
-                    playerIndex,
-                    pawn,
-                    positions[playerIndex][pawn]
-                )
-
-                val point = Offset(
-                    center.x * cell,
-                    center.y * cell
-                )
-
-                drawCircle(
-                    Color.Black,
-                    cell * 0.43f,
-                    point
-                )
-
-                drawCircle(
-                    player.color,
-                    cell * 0.34f,
-                    point
-                )
-
-                drawCircle(
-                    Color.White,
-                    cell * 0.12f,
-                    point
-                )
-            }
-        }
-    }
-}
+                    var
